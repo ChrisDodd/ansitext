@@ -68,12 +68,25 @@ void draw_map(VECTOR(VECTOR(char)) map, int top, int left, int wrap) {
                 if (map[i][prev] == map[i][x]) {
                     if (j == 0) gap_color = color;
                 } else if (i > 0 && i < VECTOR_size(map) - 1) {
+                    int c1 = -1, c2 = -1;
                     if (i&1) {
                         if (map[i-1][prev] == map[i+1][prev])
                             gap_color = terrain_map[map[i-1][prev] & 0x7f];
+                        if (map[i][prev] == map[i-1][prev] || map[i][prev] == map[i+1][prev])
+                            c1 = prev_color;
+                        if (map[i][x] == map[i-1][prev] || map[i][x] == map[i+1][prev])
+                            c2 = color;
                     } else {
                         if (map[i-1][x] == map[i+1][x])
-                            gap_color = terrain_map[map[i-1][x] & 0x7f]; } }
+                            gap_color = terrain_map[map[i-1][x] & 0x7f];
+                        if (map[i][prev] == map[i-1][x] || map[i][prev] == map[i+1][x])
+                            c1 = prev_color;
+                        if (map[i][x] == map[i-1][x] || map[i][x] == map[i+1][x])
+                            c2 = color; }
+                    if (gap_color < 0 && c1 < 0)
+                        gap_color = c2;
+                    if (gap_color < 0 && c2 < 0)
+                        gap_color = c1; }
                 if (gap_color < 0) {
                     if (prev_color >= 0  && prev_color < color)
                         gap_color = prev_color;
