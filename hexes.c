@@ -21,13 +21,13 @@ int main(int ac, char **av) {
         fprintf(stderr, "usage: %s <width> <height>\n", av[0]);
         exit(1);
     }
-    line(width, u8"\U0001fba3", u8"\u2500\u2500", u8"\U0001fba2", "  ");
+    line(width, "\U0001fba3", "\u2500\u2500", "\U0001fba2", "  ");
     
     while (--height > 0) {
-        line(width, u8"\U0001fba4", "  ", u8"\U0001fba5", u8"\u2500\u2500");
-        line(width, u8"\U0001fba5", u8"\u2500\u2500", u8"\U0001fba4", "  ");
+        line(width, "\U0001fba4", "  ", "\U0001fba5", "\u2500\u2500");
+        line(width, "\U0001fba5", "\u2500\u2500", "\U0001fba4", "  ");
     }
 
-    line(width, u8"\U0001fba4", "  ", u8"\U0001fba5", u8"\u2500\u2500");
-    line(width, u8"\U0001fba1", u8"\u2500\u2500", u8"\U0001fba0", "  ");
+    line(width, "\U0001fba4", "  ", "\U0001fba5", "\u2500\u2500");
+    line(width, "\U0001fba1", "\u2500\u2500", "\U0001fba0", "  ");
 }

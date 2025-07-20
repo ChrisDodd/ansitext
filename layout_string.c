@@ -42,3 +42,42 @@ VECTOR(struct line) layout_string(const char *s, unsigned width, unsigned height
         VECTOR_push(rv, current); }
     return rv;
 }
+
+char *layout_index(char *s, unsigned idx) {
+    while (idx > 0) {
+        if (*s == 0 || *s == '\n') return s;
+        if (*s & 0x80) {
+            int len = *s << 1;
+            while (len & 0x80 && (s[1] & 0xc0) == 0x80) {
+                len <<= 1;
+                ++s; }  }
+        ++s;
+        --idx;
+        if (*s == '\x1b' && s[1] == '[') {
+            ++s;
+            while (*++s == ';' || (*s >= '0' && *s <= '9'));
+            if (*s) ++s; }}
+    return s;
+}
+
+int layout_width(const char *s, const char *e) {
+    int width = 0;
+    while (s < e) {
+        if (*s == 0 || *s == '\n') return -1;
+        if (*s == '\x1b' && s[1] == '[') {
+            ++s;
+            while (*++s == ';' || (*s >= '0' && *s <= '9'));
+            if (!*s) return -1;
+            ++s;
+            continue; }
+        if (*s & 0x80) {
+            int len = *s << 1;
+            while (len & 0x80 && (s[1] & 0xc0) == 0x80) {
+                len <<= 1;
+                ++s; } 
+        }
+        ++width;
+        ++s;
+    }
+    return width;
+}

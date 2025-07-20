@@ -1,13 +1,14 @@
 CC = gcc
 CXX = c++
-CFLAGS = -std=gnu11 -Wall -Wextra -MMD -MP -g -O0 -D_XOPEN_SOURCE_EXTENDED
-CXXFLAGS = -std=gnu++11 -Wall -Wextra -Woverloaded-virtual -g -O0 -D_XOPEN_SOURCE_EXTENDED
+CFLAGS = -std=gnu2x -Wall -Wextra -MMD -MP -g -O0 -D_XOPEN_SOURCE_EXTENDED
+CXXFLAGS = -std=gnu++2x -Wall -Wextra -Woverloaded-virtual -g -O0 -D_XOPEN_SOURCE_EXTENDED
 
-all: hexmap mkcolor boxedit hexes test_layout
+all: hexmap mkcolor boxedit hexes test_layout test_linedraw
 
 hexmap: ansi.o vector.o mapedit.o
-boxedit: ansi.o vector.o layout_string.o utf8.o
+boxedit: ansi.o boxes.o editline.o layout_string.o links.o vector.o utf8.o
 test_layout: layout_string.o vector.o
+test_linedraw: ansi.o linedraw.o
 
 clean:
 	rm -f *.o hexmap
