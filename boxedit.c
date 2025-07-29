@@ -5,8 +5,23 @@
 #include "editline.h"
 #include "utf8.h"
 
+image_t *initial_image(unsigned screen_size, VECTOR(struct box_t) boxes) {
+    int width = GETX(screen_size) + 1;
+    int height = GETY(screen_size) + 1;
+    for (box_t *b = VECTOR_begin(boxes); b < VECTOR_end(boxes); ++b) {
+        if (b->right >= width) width = b->right + 1;
+        if (b->bottom >= height) height = b->bottom + 1;
+    }
+    image_t *rv = newimage(height, width);
+    for (box_t *b = VECTOR_begin(boxes); b < VECTOR_end(boxes); ++b)
+        draw_box_image(rv, b);
+    return rv;
+}
+
 int main(int ac, char **av) {
-    int style_idx = 0;
+    linetype_t current_style = SINGLE;
+    unsigned screen_size = getsize();
+    fill_missing_double2mixed();
     VECTOR(struct box_t) boxes = 0;
     VECTOR(char) savefile = 0;
     printf("%s%s", CLEARALL, gotoyx(0, 0));
@@ -22,7 +37,9 @@ int main(int ac, char **av) {
             fprintf(stderr, "Can't open %s\n", av[1]); } }
     fputs(MOUSE_BTN_ENABLE MOUSE_SGR, stdout);
     fflush(stdout);
-    for (box_t *b = VECTOR_begin(boxes); b < VECTOR_end(boxes); ++b) draw_box(b);
+    image_t *screen = initial_image(screen_size, boxes);
+    draw_image(screen, TOPLEFT, screen_size, TOPLEFT);
+    for (box_t *b = VECTOR_begin(boxes); b < VECTOR_end(boxes); ++b) draw_box_label(b);
     fflush(stdout);
     box_t *current = 0;
     char *edit = 0;
@@ -37,23 +54,23 @@ int main(int ac, char **av) {
             current = find_box(boxes, MOUSE_Y(ch), MOUSE_X(ch), &edge);
             if (MOUSE_1(ch) && current) {
                 if (edge == NONE) {
-                    ch = move_box(current, MOUSE_Y(ch) - current->top,
+                    ch = move_box(screen, current, MOUSE_Y(ch) - current->top,
                                   MOUSE_X(ch) - current->left, boxes);
                 } else {
-                    ch = resize_box(current, edge, boxes); }
+                    ch = resize_box(screen, current, edge, boxes); }
                 if (ch & MOUSE)
                     edit = get_box_edit(current, MOUSE_Y(ch), MOUSE_X(ch));
             } else if (MOUSE_3(ch) && !current) {
                 struct box_t tmp;
                 memset(&tmp, 0, sizeof tmp);
-                tmp.style = &styles[style_idx];
+                tmp.style = current_style;
                 tmp.label = 0;
                 tmp.top = tmp.bottom = MOUSE_Y(ch);
                 tmp.left = tmp.right = MOUSE_X(ch);
                 tmp.bottom++;
                 tmp.right++;
                 VECTOR_add(boxes, tmp);
-                ch = resize_box(&VECTOR_top(boxes), BOTTOM_RIGHT, boxes);
+                ch = resize_box(screen, &VECTOR_top(boxes), BOTTOM_RIGHT, boxes);
             } else if (MOUSE_3(ch) && edge != NONE) {
                 ch = add_link(current, edge, MOUSE_Y(ch), MOUSE_X(ch), boxes);
             } else {
@@ -123,18 +140,22 @@ int main(int ac, char **av) {
                     edit = p; }
                 VECTOR_terminate(current->label, 0);
                 current->fmt_width = 0;  // force recompute of fmt
-                draw_box(current);
+                draw_box_label(current);
                 fflush(stdout); }
             break;
-        case KEY_F1: style_idx = 0; goto setstyle;
-        case KEY_F2: style_idx = 1; goto setstyle;
-        case KEY_F3: style_idx = 2; goto setstyle;
-        case KEY_F4: style_idx = 3; goto setstyle;
+        case KEY_F1: current_style = 0; goto setstyle;
+        case KEY_F2: current_style = 1; goto setstyle;
+        case KEY_F3: current_style = 2; goto setstyle;
+        case KEY_F4: current_style = 3; goto setstyle;
         setstyle:
             if (current) {
-                current->style = &styles[style_idx];
-                draw_box(current);
-                fflush(stdout); }
+                image_t *prev = dupimage(screen);
+                current->style = current_style;
+                draw_box_image(screen, current);
+                update_image(prev, screen, boxTL(current), boxBR(current), boxTL(current));
+                draw_box_label(current);
+                fflush(stdout);
+                free(prev); }
             break;
         default:
             if (ch < ' ' || ch >= 0x7f) break;
@@ -149,7 +170,7 @@ int main(int ac, char **av) {
                 VECTOR_terminate(current->label, 0);
                 edit = current->label + off + 1;
                 current->fmt_width = 0;  // force recompute of fmt
-                draw_box(current);
+                draw_box_label(current);
                 fflush(stdout); }
             break;
         }

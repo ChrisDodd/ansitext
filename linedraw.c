@@ -32,11 +32,11 @@ char linechars[256][8] = {
     [BOTTOM(SINGLE) + LEFT(HEAVY)] = "\u2511",
     [BOTTOM(HEAVY) + LEFT(SINGLE)] = "\u2512",
     [BOTTOM(HEAVY) + LEFT(HEAVY)] = "\u2513",
-    [TOP(SINGLE) + RIGHT(SINGLE)] = CURVE("\u2514", "\u256f"),
+    [TOP(SINGLE) + RIGHT(SINGLE)] = CURVE("\u2514", "\u2570"),
     [TOP(SINGLE) + RIGHT(HEAVY)] = "\u2515",
     [TOP(HEAVY) + RIGHT(SINGLE)] = "\u2516",
     [TOP(HEAVY) + RIGHT(HEAVY)] = "\u2517",
-    [TOP(SINGLE) + LEFT(SINGLE)] = CURVE("\u2518", "\u2570"),
+    [TOP(SINGLE) + LEFT(SINGLE)] = CURVE("\u2518", "\u256f"),
     [TOP(SINGLE) + LEFT(HEAVY)] = "\u2519",
     [TOP(HEAVY) + LEFT(SINGLE)] = "\u251a",
     [TOP(HEAVY) + LEFT(HEAVY)] = "\u251b",
@@ -132,6 +132,8 @@ char linechars[256][8] = {
     [BOTTOM(SINGLE) + TOP(HEAVY)] = "\u257f",
 };
 
+const char *linetype_name[] = { "blank", "single", "double", "heavy", 0 };
+
 void fill_missing_fixed(const char *f) {
     assert(strlen(f) < 8);
     for (int ch = 0; ch < 256; ++ch) {
@@ -194,6 +196,10 @@ image_t *dupimage(const image_t *src) {
     image_t *rv = malloc(size);
     if (rv) memcpy(rv, src, size);
     return rv;
+}
+
+void clearimage(image_t *image) {
+    memset(image->data, 0, image->height * image->width);
 }
 
 void copyimage(image_t *dest, const image_t *src) {

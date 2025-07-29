@@ -66,7 +66,7 @@ int main() {
         case KEY_F1: style = SINGLE; break;
         case KEY_F2: style = DOUBLE; break;
         case KEY_F3: style = HEAVY; break;
-        case KEY_F4: style = NONE; break;
+        case KEY_F4: style = BLANK; break;
         }
     }
 }

@@ -9,6 +9,7 @@
 static inline int min(int a, int b) { return a < b ? a : b; }
 static inline int max(int a, int b) { return a > b ? a : b; }
 
+#if 0
 const style_t styles[] = {
     { "square", "\u250c", "\u2510", "\u2514", "\u2518", "\u2500", "\u2502",
       "\u2534", "\u2524", "\u251c", "\u252c" },
@@ -20,10 +21,11 @@ const style_t styles[] = {
       "\u2537", "\u2528", "\u2520", "\u252f" },
 };
 const unsigned styles_count = sizeof(styles) / sizeof(styles[0]);
+#endif
 
 void write_boxes(const VECTOR(box_t) box, FILE *fp) {
     for (unsigned i = 0; i < VECTOR_size(box); ++i) {
-        fprintf(fp, "[%s %d %d %d %d", box[i].style->name, box[i].top, box[i].left,
+        fprintf(fp, "[%s %d %d %d %d", linetype_name[box[i].style], box[i].top, box[i].left,
                 box[i].right, box[i].bottom);
         if (box[i].label) {
             fprintf(fp, " \"");
@@ -44,9 +46,9 @@ VECTOR(box_t) read_boxes(FILE *fp) {
                 fprintf(stderr, "error reading boxes\n");
             break; }
         box.style = 0;
-        for (unsigned j = 0; j < styles_count; ++j)
-            if (!strcmp(type, styles[j].name)) {
-                box.style = &styles[j];
+        for (unsigned j = 0; linetype_name[j]; ++j)
+            if (!strcmp(type, linetype_name[j])) {
+                box.style = j;
                 break; }
         int ch = getc(fp);
         if (ch == '"') {
@@ -74,20 +76,18 @@ void erase_box(const box_t *box) {
     fflush(stdout);
 }
 
-void draw_box(box_t *box) {
+void draw_box_image(image_t *image, const box_t *box) {
     if (box->top >= box->bottom || box->left >= box->right) return;
+    drawbox(image, box->style, box->top, box->left, box->bottom, box->right);
+}
+
+void draw_box_label(box_t *box) {
     int width = box->right - box->left - 1;     // "inside" dimensions of the box
     int height = box->bottom - box->top - 1;
-    printf("%s%s", gotoyx(box->top, box->left), box->style->tl);
-    for (int i = width; i > 0; --i) fputs(box->style->horiz, stdout);
-    fputs(box->style->tr, stdout);
-    for (int row = box->top + 1; row < box->bottom; ++row)
-        printf("%s%s%*s%s", gotoyx(row, box->left), box->style->vert,
-               width, "", box->style->vert);
-    printf("%s%s", gotoyx(box->bottom, box->left), box->style->bl);
-    for (int i = width; i > 0; --i) fputs(box->style->horiz, stdout);
-    fputs(box->style->br, stdout);
-    if (box->label && width > 0 && height > 0) {
+    if (width <= 0 || height <= 0) return;
+    for (int r = box->top+1; r < box->bottom; ++r)
+        printf("%s%*s", gotoyx(r, box->left+1), width, "");
+    if (box->label) {
         if (!box->fmt || box->fmt->start != box->label ||
             box->fmt_width != width || box->fmt_height != height) {
             if (box->fmt) VECTOR_fini(box->fmt);
@@ -166,8 +166,17 @@ bool box_overlaps_any(const VECTOR(box_t) all, const box_t *box) {
     return false;
 }
 
-int resize_box(box_t *box, boxedge_t adjust, const VECTOR(box_t) all) {
+int resize_box(image_t *screen, box_t *box, boxedge_t adjust, const VECTOR(box_t) all) {
     int loc;
+    image_t *background = dupimage(screen);
+    clearimage(background);
+    unsigned screen_size = getsize();
+    for (const box_t *b = VECTOR_begin(all); b != VECTOR_end(all); ++b) {
+        if (b == box) continue;
+        draw_box_image(background, b);
+    }
+    image_t *prev = dupimage(screen);
+    image_t *next = dupimage(background);
     do {
         loc = getch();
         if (!(loc & MOUSE)) {
@@ -186,38 +195,30 @@ int resize_box(box_t *box, boxedge_t adjust, const VECTOR(box_t) all) {
                 adjust = x == box->left ? LEFT : x == box->right ? RIGHT : NONE;
             break;
         case TOP:
-            if (y > box->top) erase_box(box);
             box->top = min(y, box->bottom - 1);
             break;
         case TOP_RIGHT:
-            if (x < box->right || y > box->top) erase_box(box);
             box->top = min(y, box->bottom - 1);
             box->right = max(x, box->left + 1);
             break;
         case RIGHT:
-            if (x < box->right) erase_box(box);
             box->right = max(x, box->left + 1);
             break;
         case BOTTOM_RIGHT:
-            if (x < box->right || y < box->bottom) erase_box(box);
             box->bottom = max(y, box->top + 1);
             box->right = max(x, box->left + 1);
             break;
         case BOTTOM:
-            if (y < box->bottom) erase_box(box);
             box->bottom = max(y, box->top + 1);
             break;
         case BOTTOM_LEFT:
-            if (x > box->left || y < box->bottom) erase_box(box);
             box->bottom = max(y, box->top + 1);
             box->left = min(x, box->right - 1);
             break;
         case LEFT:
-            if (x > box->left) erase_box(box);
             box->left = min(x, box->right - 1);
             break;
         case TOP_LEFT:
-            if (x > box->left || y > box->top) erase_box(box);
             box->top = min(y, box->bottom - 1);
             box->left = min(x, box->right - 1);
             break; }
@@ -227,15 +228,33 @@ int resize_box(box_t *box, boxedge_t adjust, const VECTOR(box_t) all) {
             box->right = oldpos[2];
             box->bottom = oldpos[3];
         }
-        draw_box(box);
+        draw_box_image(next, box);
+        update_image(prev, next, TOPLEFT, screen_size, TOPLEFT);
+        draw_box_label(box);
         fputs(gotoyx(y, x), stdout);
         fflush(stdout);
+        image_t *tmp = prev;
+        prev = next;
+        copyimage(next = tmp, background);
     } while (!MOUSE_UP(loc));
+    copyimage(screen, prev);
+    free(background);
+    free(prev);
+    free(next);
     return loc;
 }
 
-int move_box(box_t *box, int offy, int offx, const VECTOR(box_t) all) {
+int move_box(image_t *screen, box_t *box, int offy, int offx, const VECTOR(box_t) all) {
     int loc;
+    image_t *background = dupimage(screen);
+    clearimage(background);
+    unsigned screen_size = getsize();
+    for (const box_t *b = VECTOR_begin(all); b != VECTOR_end(all); ++b) {
+        if (b == box) continue;
+        draw_box_image(background, b);
+    }
+    image_t *prev = dupimage(screen);
+    image_t *next = dupimage(background);
     do {
         loc = getch();
         if (!(loc & MOUSE)) {
@@ -245,20 +264,31 @@ int move_box(box_t *box, int offy, int offx, const VECTOR(box_t) all) {
         int y = MOUSE_Y(loc);
         int dx = x - offx - box->left;
         int dy = y - offy - box->top;
-        erase_box(box);
         box->top += dy;
         box->bottom += dy;
         box->left += dx;
         box->right += dx;
-        if (all && box_overlaps_any(all, box)) {
+        if (box_overlaps_any(all, box)) {
             box->top -= dy;
             box->bottom -= dy;
             box->left -= dx;
             box->right -= dx;
+            dx = dy = 0;
         }
-        draw_box(box);
-        fputs(gotoyx(y, x), stdout);
-        fflush(stdout);
+        if (dx != 0 || dy != 0) {
+            draw_box_image(next, box);
+            update_image(prev, next, TOPLEFT, screen_size, TOPLEFT);
+            draw_box_label(box);
+            fputs(gotoyx(y, x), stdout);
+            fflush(stdout);
+            image_t *tmp = prev;
+            prev = next;
+            copyimage(next = tmp, background);
+        }
     } while (!MOUSE_UP(loc));
+    copyimage(screen, prev);
+    free(background);
+    free(prev);
+    free(next);
     return loc;
 }

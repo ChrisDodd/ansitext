@@ -20,6 +20,7 @@ unsigned tgetyx(struct terminal_t *);
 #define getyx() tgetyx(0)
 #define GETX(SS)  ((SS) & 0xffff)
 #define GETY(SS)  ((SS) >> 16)
+#define MAKEYX(Y, X)    ((((Y) & 0xffff) << 16) | ((X) & 0xffff))
 #define TOPLEFT   0x10001   /* top left corner of the screen is 1,1 */
 static inline unsigned getcury() { return GETY(getyx()); }
 static inline unsigned getcurx() { return GETX(getyx()); }
@@ -60,7 +61,10 @@ const char *bgcolor(int r, int g, int b);
 #define CLEAREOP        "\x1b[J"
 #define CLEARLINE       "\x1b[2K"
 #define CLEARALL        "\x1b[2J"
+// CLEARRECT/FILLRECT (DECERA/DECFRA) are defined and documented by xterm, but don't
+// seem to work
 #define CLEARRECT       "\x1b[%d;%d;%d;%d$z"  /* top, left, bottom, right */
+#define FILLRECT        "\x1b[%d;%d;%d;%d;%d$x"  /* char, top, left, bottom, right */
 #define MOVEUP          "\x1b[A"
 #define MOVEDN          "\x1b[B"
 #define MOVERIGHT       "\x1b[C"

@@ -12,7 +12,8 @@ typedef struct image_t {
 
 extern char linechars[256][8];
 
-typedef enum linetype_t { NONE, SINGLE, DOUBLE, HEAVY } linetype_t;
+typedef enum linetype_t { BLANK, SINGLE, DOUBLE, HEAVY } linetype_t;
+extern const char *linetype_name[];  /* nullptr terminated */
 void fill_missing_fixed(const char *f);
 void fill_missing_trunc_double();
 void fill_missing_double2single();
@@ -21,6 +22,7 @@ void fill_missing_double2mixed();
 
 image_t *newimage(unsigned height, unsigned width);
 image_t *dupimage(const image_t *src);
+void clearimage(image_t *image);
 void copyimage(image_t *dest, const image_t *src);
 
 void drawhline(image_t *image, linetype_t type, unsigned row, unsigned col1, unsigned col2);
