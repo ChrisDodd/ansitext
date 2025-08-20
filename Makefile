@@ -9,6 +9,7 @@ hexmap: ansi.o vector.o mapedit.o
 boxedit: ansi.o boxes.o editline.o layout_string.o linedraw.o links.o vector.o utf8.o
 test_layout: layout_string.o vector.o
 test_linedraw: ansi.o linedraw.o
+tansi: ansi.o
 
 clean:
 	rm -f *.o hexmap
