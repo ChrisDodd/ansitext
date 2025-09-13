@@ -23,6 +23,7 @@ void fill_missing_double2mixed();
 image_t *newimage(unsigned height, unsigned width);
 image_t *dupimage(const image_t *src);
 void clearimage(image_t *image);
+void clear_image_rect(image_t *image, unsigned pos, unsigned size);
 void copyimage(image_t *dest, const image_t *src);
 
 void drawhline(image_t *image, linetype_t type, unsigned row, unsigned col1, unsigned col2);

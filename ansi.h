@@ -88,6 +88,7 @@ const char *bgcolor(int r, int g, int b);
 #define MOUSE_ANY_DISABLE       "\x1b[?1003l"
 #define MOUSE_Y(CC)     ((CC) & 0xfff)
 #define MOUSE_X(CC)     (((CC) >> 12) & 0xfff)
+#define MOUSE_YX(CC)    (MAKEYX(MOUSE_Y(CC), MOUSE_X(CC)))
 #define MOUSE_1(CC)     ((((CC) >> 24) & 0x43) == 0)
 #define MOUSE_2(CC)     ((((CC) >> 24) & 0x43) == 1)
 #define MOUSE_3(CC)     ((((CC) >> 24) & 0x43) == 2)

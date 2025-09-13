@@ -87,3 +87,13 @@ void *popup_menu(unsigned row, unsigned col, struct menu *menu) {
 void *cascade_menu(void *menu, struct menu_args *args) {
     return popup_menu(args->row + args->index + 1, args->col + args->menu->width + 1, menu);
 }
+
+unsigned menu_area(struct menu *menu) {
+    unsigned height = 0;
+    char *l;
+    for (; (l = menu->entries[height].label); ++height) {
+        unsigned w = layout_width(l, l + strlen(l));
+        if (w > menu->width) menu->width = w;
+    }
+    return MAKEYX(height + 2, menu->width + 2);
+}

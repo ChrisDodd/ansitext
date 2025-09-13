@@ -202,6 +202,12 @@ void clearimage(image_t *image) {
     memset(image->data, 0, image->height * image->width);
 }
 
+void clear_image_rect(image_t *image, unsigned pos, unsigned size) {
+    unsigned char *p = image->data + image->width * GETY(pos) + GETX(pos);;
+    for (int h = GETY(size); h >= 0; --h, p += image->width)
+        memset(p, 0, GETX(size));
+}
+
 void copyimage(image_t *dest, const image_t *src) {
     if (dest->width == src->width) {
         if (dest->height <= src->height) {

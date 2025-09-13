@@ -22,5 +22,6 @@ struct menu_args {
 
 void *popup_menu(unsigned row, unsigned col, struct menu *);
 void *cascade_menu(void *, struct menu_args *);
+unsigned menu_area(struct menu *);
 
 #endif  /* _menu_h_ */
