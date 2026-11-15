@@ -53,6 +53,7 @@ int expand_raw_vector(void **vec, size_t elsize, size_t align)
 	return -1; }
     char *base = *vec ? (char *)*vec - align : 0;
     if (!(base = realloc(base, elsize * ncap + align))) return -1;
+    if (!*vec) ((unsigned *)(base + align))[-1] = 0;
     cap = (*vec = base + align) - 2*sizeof(unsigned);
     *cap = ncap;
     return 0;

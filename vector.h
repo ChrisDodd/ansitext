@@ -7,7 +7,11 @@
  */
 #include <stddef.h>
 
+#if __STD_VERSION__ >= 202311L || __GNUC__ >= 3
+#define VECTOR(TYPE)            typeof(TYPE *)
+#else
 #define VECTOR(TYPE)            TYPE *
+#endif
 #define RAW(X)                  X
 
 /* access the store vector size and capacity stored before the vector contents */
@@ -176,5 +180,11 @@ extern int init_raw_vector(void **vec, size_t elsize, size_t align, unsigned min
 extern int insert_raw_vector(void **vec, size_t elsize, size_t align, unsigned idx, unsigned cnt);
 extern int reserve_raw_vector(void **vec, size_t elsize, size_t align, unsigned size, int shrink);
 extern int shrink_raw_vector(void **vec, size_t elsize, size_t align);
+
+#if __STD_VERSION__ >= 202311L || __GNUC__ >= 3
+#define VECTOR_FOREACH(NAME, vec, ...) for(typeof(vec) NAME = VECTOR_begin(vec); NAME < VECTOR_end(vec); ++NAME __VA_OPT__(,) __VA_ARGS__)
+#else
+#define VECTOR_FOREACH(TYPE, NAME, vec, ...) for(TYPE NAME = VECTOR_begin(vec); NAME < VECTOR_end(vec); ++NAME __VA_OPT__(,) __VA_ARGS__)
+#endif
 
 #endif /* _vector_h_ */
