@@ -48,7 +48,7 @@ void *save_file(void *arg, struct menu_args *) {
     return 0;
 }
 
-void *quit(void *, struct menu_args *) {
+[[noreturn]] void *quit(void *, struct menu_args *) {
     fputs(gotoyx(999, 0), stdout);
     fflush(stdout);
     reset();

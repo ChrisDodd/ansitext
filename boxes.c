@@ -87,8 +87,8 @@ void draw_box_label(box_t *box) {
     if (width <= 0 || height <= 0) return;
     for (int r = box->top+1; r < box->bottom; ++r)
         printf("%s%*s", gotoyx(r, box->left+1), width, "");
-    if (box->label) {
-        if (!box->fmt || box->fmt->start != box->label ||
+    if (box->label && VECTOR_size(box->label)) {
+        if (!box->fmt || VECTOR_size(box->fmt) == 0 || box->fmt->start != box->label ||
             box->fmt_width != width || box->fmt_height != height) {
             if (box->fmt) VECTOR_fini(box->fmt);
             box->fmt = layout_string(box->label, (box->fmt_width = width),
@@ -103,10 +103,10 @@ int set_box_edit(box_t *box, char *edit) {
     int width = box->right - box->left - 1;     // "inside" dimensions of the box
     int height = box->bottom - box->top - 1;
     int x, y;
-    if (box->label && width > 0 && height > 0) {
-        if (!box->fmt || box->fmt->start != box->label ||
+    if (box->label && VECTOR_size(box->label) && width > 0 && height > 0) {
+        if (!box->fmt || VECTOR_size(box->fmt) == 0 || box->fmt->start != box->label ||
             box->fmt_width != width || box->fmt_height != height) {
-            assert(false);  // should never happen
+            // can only happen if the label contains NUL bytes
             if (box->fmt) VECTOR_fini(box->fmt);
             box->fmt = layout_string(box->label, (box->fmt_width = width),
                                      (box->fmt_height = height)); }

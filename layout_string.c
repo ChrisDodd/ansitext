@@ -1,8 +1,7 @@
 #include "layout_string.h"
 
 VECTOR(struct line) layout_string(const char *s, unsigned width, unsigned height) {
-    VECTOR(struct line) rv;
-    VECTOR_init(rv);
+    VECTOR(struct line) rv = 0;
     while (*s && VECTOR_size(rv) < height) {
         const char *last = 0;
         struct line current = { s, 0, 0 }, prefix = { 0, 0, 0 };
