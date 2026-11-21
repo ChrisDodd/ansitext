@@ -10,13 +10,14 @@
 image_t *initial_image(unsigned screen_size, VECTOR(struct box_t) boxes) {
     int width = GETX(screen_size) + 1;
     int height = GETY(screen_size) + 1;
-    for (box_t *b = VECTOR_begin(boxes); b < VECTOR_end(boxes); ++b) {
+    VECTOR_FOREACH(b, boxes) {
         if (b->right >= width) width = b->right + 1;
-        if (b->bottom >= height) height = b->bottom + 1;
-    }
+        if (b->bottom >= height) height = b->bottom + 1; }
     image_t *rv = newimage(height, width);
-    for (box_t *b = VECTOR_begin(boxes); b < VECTOR_end(boxes); ++b)
+    VECTOR_FOREACH(b, boxes) {
         draw_box_image(rv, b);
+        VECTOR_FOREACH(l, b->links)
+            draw_link_image(rv, b, l); }
     return rv;
 }
 
@@ -110,7 +111,7 @@ int main(int ac, char **av) {
             fflush(stdout); }
         int ch = getch();
         if (ch & MOUSE) {
-            boxedge_t edge;
+            boxedge_t edge = NONE;
             current = find_box(boxes, MOUSE_Y(ch), MOUSE_X(ch), &edge);
             if (MOUSE_1(ch) && MOUSE_Y(ch) == 1 && MOUSE_X(ch) <= 6) {
                 popup_menu(1, MOUSE_X(ch), &file_menu);
@@ -126,7 +127,8 @@ int main(int ac, char **av) {
                     ch = resize_box(screen, current, edge, boxes); }
                 if (ch & MOUSE)
                     edit = get_box_edit(current, MOUSE_Y(ch), MOUSE_X(ch));
-            } else if (MOUSE_3(ch) && !current && MOUSE_Y(ch) > 1) {
+            } else if (MOUSE_3(ch) && !current) {
+                if (MOUSE_Y(ch) <= 1) continue;
                 struct box_t tmp;
                 memset(&tmp, 0, sizeof tmp);
                 tmp.style = current_style;
@@ -138,7 +140,7 @@ int main(int ac, char **av) {
                 VECTOR_add(boxes, tmp);
                 ch = resize_box(screen, &VECTOR_top(boxes), BOTTOM_RIGHT, boxes);
             } else if (MOUSE_3(ch) && edge != NONE) {
-                ch = add_link(current, edge, MOUSE_Y(ch), MOUSE_X(ch), boxes);
+                ch = add_link(screen, current, edge, MOUSE_Y(ch), MOUSE_X(ch), boxes);
             } else if (MOUSE_3(ch)) {
                 box_t *cur = current;
                 popup_menu(MOUSE_Y(ch), MOUSE_X(ch), &box_menu);
