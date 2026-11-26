@@ -17,7 +17,7 @@ image_t *initial_image(unsigned screen_size, VECTOR(struct box_t) boxes) {
     VECTOR_FOREACH(b, boxes) {
         draw_box_image(rv, b);
         VECTOR_FOREACH(l, b->links)
-            draw_link_image(rv, b, l); }
+            draw_link_image(rv, b, l, SINGLE); }
     return rv;
 }
 
@@ -26,6 +26,7 @@ void *quit(void *, struct menu_args *);
 VECTOR(char) savefile_name = 0;
 VECTOR(struct box_t) boxes = 0;
 box_t *current = 0;
+int current_link = -1;  // link index in current box
 
 struct menu file_menu = { 0, {
     { "save", save_file, &savefile_name },
@@ -73,6 +74,15 @@ void *delete_box(void *, struct menu_args *) {
     return 0;
 }
 
+void *delete_link(void *_screen, struct menu_args *) {
+    image_t *screen = _screen;
+    draw_link_image(screen, current, &current->links[current_link], BLANK);
+    remove_link(boxes, current, current_link);
+    VECTOR_erase(current->links, current_link);
+    current_link = -1;
+    return 0;
+}
+
 struct menu box_menu = { 0, {
     { "single", set_box_style, (void *)SINGLE },
     { "double", set_box_style, (void *)DOUBLE },
@@ -80,6 +90,12 @@ struct menu box_menu = { 0, {
     { "delete", delete_box, 0 },
     { 0, 0, 0 }
 } };
+
+struct menu link_menu = { 0, {
+    { "delete", delete_link, 0 },
+    { 0, 0, 0 }
+} };
+
 
 int main(int ac, char **av) {
     linetype_t current_style = SINGLE;
@@ -99,6 +115,7 @@ int main(int ac, char **av) {
     fputs(MOUSE_BTN_ENABLE MOUSE_SGR, stdout);
     fflush(stdout);
     image_t *screen = initial_image(screen_size, boxes);
+    boxmap_t *boxmap = create_boxmap(boxes, screen_size);
     draw_image(screen, TOPLEFT, screen_size, TOPLEFT);
     printf("%s FILE" CLEAREOL, gotoyx(1, 1)); fflush(stdout);
     for (box_t *b = VECTOR_begin(boxes); b < VECTOR_end(boxes); ++b) draw_box_label(b);
@@ -112,7 +129,7 @@ int main(int ac, char **av) {
         int ch = getch();
         if (ch & MOUSE) {
             boxedge_t edge = NONE;
-            current = find_box(boxes, MOUSE_Y(ch), MOUSE_X(ch), &edge);
+            current = find_box(boxmap, boxes, MOUSE_Y(ch), MOUSE_X(ch), &edge, &current_link);
             if (MOUSE_1(ch) && MOUSE_Y(ch) == 1 && MOUSE_X(ch) <= 6) {
                 popup_menu(1, MOUSE_X(ch), &file_menu);
                 draw_image(screen, TOPLEFT, menu_area(&file_menu), TOPLEFT);
@@ -120,7 +137,8 @@ int main(int ac, char **av) {
                 continue;
             }
             if (MOUSE_1(ch) && current) {
-                if (edge == NONE) {
+                if (current_link >= 0) {
+                } else if (edge == NONE) {
                     ch = move_box(screen, current, MOUSE_Y(ch) - current->top,
                                   MOUSE_X(ch) - current->left, boxes);
                 } else {
@@ -139,22 +157,35 @@ int main(int ac, char **av) {
                 tmp.right++;
                 VECTOR_add(boxes, tmp);
                 ch = resize_box(screen, &VECTOR_top(boxes), BOTTOM_RIGHT, boxes);
+                regen_boxmap(boxmap, boxes);
             } else if (MOUSE_3(ch) && edge != NONE) {
-                ch = add_link(screen, current, edge, MOUSE_Y(ch), MOUSE_X(ch), boxes);
+                ch = add_link(screen, current, edge, MOUSE_Y(ch), MOUSE_X(ch), boxmap, boxes);
+                regen_boxmap(boxmap, boxes);
             } else if (MOUSE_3(ch)) {
                 box_t *cur = current;
-                popup_menu(MOUSE_Y(ch), MOUSE_X(ch), &box_menu);
+                struct menu *menu = current_link >= 0 ? &link_menu : &box_menu;
+                link_menu.entries[0].action_arg = screen;  // FIXME - cleaner way to do this?
+                popup_menu(MOUSE_Y(ch), MOUSE_X(ch), menu);
                 image_t *prev = dupimage(screen);
-                clear_image_rect(prev, MOUSE_YX(ch), menu_area(&box_menu));
+                clear_image_rect(prev, MOUSE_YX(ch), menu_area(menu));
                 if (current) {
                     draw_box_image(screen, current);
                     update_image(prev, screen, boxTL(current), boxBR(current), boxTL(current));
+                    if (current_link < 0) regen_boxmap(boxmap, boxes);
                 } else {
                     cur->style = BLANK;
                     draw_box_image(screen, cur);
+                    VECTOR_FOREACH(l, cur->links)
+                        draw_link_image(screen, cur, l, BLANK);
+                    VECTOR_FOREACH(i, cur->inlinks) {
+                        box_t *b = &boxes[i->box];
+                        draw_link_image(screen, b, &b->links[i->link], BLANK); }
                     erase_box(cur);
                     update_image(prev, screen, boxTL(cur), boxBR(cur), boxTL(cur));
-                    VECTOR_erase(boxes, cur - boxes, 1); }
+                    remove_all_links(boxes, cur);
+                    VECTOR_erase(boxes, cur - boxes);
+                    fix_boxes_after_removal(boxes, cur - boxes);
+                    regen_boxmap(boxmap, boxes); }
                 if (current) draw_box_label(current);
                 fflush(stdout);
                 free(prev);

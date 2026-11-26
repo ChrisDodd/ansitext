@@ -44,6 +44,14 @@ void write_boxes(const VECTOR(box_t) boxes, FILE *fp) {
     }
 }
 
+static box_t *search_for_box(VECTOR(box_t) all, int row, int col, boxedge_t *edge) {
+    for (box_t *b = VECTOR_begin(all); b < VECTOR_end(all); ++b) {
+        if (row < b->top || row > b->bottom || col < b->left || col > b->right) continue;
+        if (edge) *edge = box_edge(b, row, col);
+        return b; }
+    return 0;
+}
+
 void boxes_fixup(VECTOR(box_t) boxes) {
     VECTOR_FOREACH(box, boxes) {
         VECTOR_FOREACH(link, box->links) {
@@ -66,7 +74,7 @@ void boxes_fixup(VECTOR(box_t) boxes) {
             if (link->off != off) {
                 errmsg("link offset wrong (%d instead of %d)", link->off, off);
                 off = link->off; }
-            box_t *endbox = find_box(boxes, end->row, end->col, &edge);
+            box_t *endbox = search_for_box(boxes, end->row, end->col, &edge);
             if (link->endbox != (endbox ? endbox - boxes : -1)) {
                 errmsg("link endbox wrong (%d instead of %zd)", link->endbox,
                        (endbox ? endbox - boxes : -1));
@@ -164,6 +172,16 @@ void erase_box(const box_t *box) {
     fflush(stdout);
 }
 
+void fix_boxes_after_removal(VECTOR(box_t) boxes, int removed) {
+    VECTOR_FOREACH(box, boxes) {
+        VECTOR_FOREACH(link, box->links) {
+            assert(link->endbox != removed);
+            if (link->endbox > removed) --link->endbox; }
+        VECTOR_FOREACH(inlink, box->inlinks) {
+            assert(inlink->box != removed);
+            if (inlink->box > removed) --inlink->box; } }
+}
+
 void draw_box_image(image_t *image, const box_t *box) {
     if (box->top >= box->bottom || box->left >= box->right) return;
     drawbox(image, box->style, box->top, box->left, box->bottom, box->right);
@@ -239,14 +257,6 @@ boxedge_t box_edge(box_t *b, int row, int col) {
         return col == b->left ? LEFT : col == b->right ? RIGHT : NONE;
 }
 
-box_t *find_box(VECTOR(box_t) all, int row, int col, boxedge_t *edge) {
-    for (box_t *b = VECTOR_begin(all); b < VECTOR_end(all); ++b) {
-        if (row < b->top || row > b->bottom || col < b->left || col > b->right) continue;
-        if (edge) *edge = box_edge(b, row, col);
-        return b; }
-    return 0;
-}
-
 bool box_overlaps_any(const VECTOR(box_t) all, const box_t *box) {
     for (const box_t *b = VECTOR_begin(all); b < VECTOR_end(all); ++b) {
         if (b == box) continue;
@@ -266,7 +276,7 @@ int resize_box(image_t *screen, box_t *box, boxedge_t adjust, const VECTOR(box_t
         if (b == box) continue;
         draw_box_image(background, b);
         VECTOR_FOREACH(l, b->links)
-            if (l->endbox != box - all) draw_link_image(background, b, l); }
+            if (l->endbox != box - all) draw_link_image(background, b, l, SINGLE); }
     image_t *prev = dupimage(screen);
     image_t *next = dupimage(background);
     do {
@@ -318,11 +328,11 @@ int resize_box(image_t *screen, box_t *box, boxedge_t adjust, const VECTOR(box_t
         draw_box_image(next, box);
         VECTOR_FOREACH(l, box->links) {
             l->off = fix_link_end(l->points, box, l->edge, l->off);
-            draw_link_image(next, box, l); }
+            draw_link_image(next, box, l, SINGLE); }
         VECTOR_FOREACH(in, box->inlinks) {
             outlink_t *l = &all[in->box].links[in->link];
             in->off = fix_link_end(&VECTOR_top(l->points), box, in->edge, in->off);
-            draw_link_image(next, &all[in->box], l); }
+            draw_link_image(next, &all[in->box], l, SINGLE); }
         update_image(prev, next, TOPLEFT, screen_size, TOPLEFT);
         draw_box_label(box);
         fputs(gotoyx(y, x), stdout);
@@ -347,7 +357,7 @@ int move_box(image_t *screen, box_t *box, int offy, int offx, const VECTOR(box_t
         if (b == box) continue;
         draw_box_image(background, b);
         VECTOR_FOREACH(l, b->links)
-            if (l->endbox != box - all) draw_link_image(background, b, l); }
+            if (l->endbox != box - all) draw_link_image(background, b, l, SINGLE); }
     image_t *prev = dupimage(screen);
     image_t *next = dupimage(background);
     do {
@@ -375,12 +385,12 @@ int move_box(image_t *screen, box_t *box, int offy, int offx, const VECTOR(box_t
             VECTOR_FOREACH(l, box->links) {
                 l->points[0].col += dx;
                 l->points[0].row += dy;
-                draw_link_image(next, box, l); }
+                draw_link_image(next, box, l, SINGLE); }
             VECTOR_FOREACH(in, box->inlinks) {
                 outlink_t *l = &all[in->box].links[in->link];
                 VECTOR_top(l->points).col += dx;
                 VECTOR_top(l->points).row += dy;
-                draw_link_image(next, &all[in->box], l); }
+                draw_link_image(next, &all[in->box], l, SINGLE); }
             update_image(prev, next, TOPLEFT, screen_size, TOPLEFT);
             draw_box_label(box);
             fputs(gotoyx(y, x), stdout);

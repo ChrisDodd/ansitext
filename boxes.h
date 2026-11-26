@@ -48,19 +48,26 @@ typedef struct box_t {
     int fmt_width, fmt_height;
 } box_t;
 
-int add_link(image_t *screen, box_t *from, boxedge_t edge, int row, int col, VECTOR(box_t));
+typedef struct boxmap_t boxmap_t;
+
+int add_link(image_t *, box_t *, boxedge_t, int row, int col, boxmap_t *, VECTOR(box_t));
 boxedge_t box_edge(box_t *b, int row, int col);
 bool box_overlaps_any(const VECTOR(box_t) all, const box_t *box);
 void cleanup_box(box_t *);
+boxmap_t *create_boxmap(const VECTOR(box_t) boxes, unsigned screen_size);
 void draw_box_image(image_t *image, const box_t *box);
 void draw_box_label(box_t *box);
-void draw_link_image(image_t *, const box_t *, const outlink_t *);
+void draw_link_image(image_t *, const box_t *, const outlink_t *, linetype_t);
 void erase_box(const box_t *box);
-box_t *find_box(VECTOR(box_t) all, int row, int col, boxedge_t *edge);
+box_t *find_box(boxmap_t *bm, VECTOR(box_t) all, int row, int col, boxedge_t *edge, int *link);
+void fix_boxes_after_removal(VECTOR(box_t) boxes, int removed);
 int fix_link_end(loc_t *end, const box_t *box, boxedge_t edge, int off);
 char *get_box_edit(box_t *box, int y, int x);
 int move_box(image_t *screen, box_t *box, int dy, int dx, const VECTOR(box_t));
 VECTOR(box_t) read_boxes(FILE *fp);
+void regen_boxmap(boxmap_t *bm, const VECTOR(box_t) boxes);
+void remove_link(VECTOR(box_t) all, box_t *box, int link);
+void remove_all_links(VECTOR(box_t) all, box_t *box);
 int resize_box(image_t *screen, box_t *box, boxedge_t adjust, const VECTOR(box_t));
 int set_box_edit(box_t *box, char *edit);
 void write_boxes(const VECTOR(box_t) box, FILE *fp);
